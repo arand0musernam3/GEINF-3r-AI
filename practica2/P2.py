@@ -284,7 +284,7 @@ x = df.drop(columns=["paid"])
 
 from matplotlib import pyplot
 
-k = 10
+k = 5
 kf = KFold(n_splits=k)
 
 for j in ["gini", "entropy", "log_loss"]:
@@ -342,7 +342,7 @@ y_pred = model.predict(X_test)
 import graphviz
 from sklearn.tree import export_graphviz
 
-dot_data = export_graphviz(model, out_file=None,
+dot_data = export_graphviz(model, out_file=None, feature_names=["age", "children", "smoker", "region", "charges"],
                            class_names=["False", "True"], filled=True, rounded=True,
                            special_characters=True)
 
