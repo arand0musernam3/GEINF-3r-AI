@@ -1,0 +1,23 @@
+{
+    "InternalPDFViewer": {
+        "Embedded": true,
+        "File": "../../Paradigmes/exercicisProgramacioLogica.pdf"
+    },
+    "Session": {
+        "Bookmarks": [
+        ],
+        "CurrentFile": "informeP1.tex",
+        "FileVersion": 1,
+        "Files": [
+            {
+                "Col": 0,
+                "EditorGroup": 0,
+                "FileName": "informeP1.tex",
+                "FirstLine": 0,
+                "FoldedLines": "",
+                "Line": 0
+            }
+        ],
+        "MasterFile": ""
+    }
+}

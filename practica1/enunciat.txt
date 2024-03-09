@@ -1,0 +1,51 @@
+# -*- coding: utf-8 -*-
+
+# For solving this practic exercise you will need to use:
+#   python programming language 
+#   pandas library (pandas.pydata.org) -> Tutorial ... http://pandas.pydata.org/docs/getting_started/index.html
+#   sikit-learn library
+#
+# Is recomended to use anaconda (www.anaconda.com) and use built in spyder IDE.
+# As with a single instalation all the required libraries will be instalated.
+# All computers in the laboratory has this optin and others (pycharm...) already installed
+
+
+#1) Load the starwars dataset as a pandas dataframe. (1 point)
+
+
+
+#2) Inspect de dataser. How many intstances and variales there are in the original dataset? (1 point)
+
+
+
+#3) Let's imagine we want to create a model that predicts the homeworld of a character.
+# Do you think that all the variables are relevant? Wich ones are important and wich ones are not in our case.
+#If some of them are not relevant delete them. Give the reason why you delete the variables. (1 point)
+
+
+
+#4) In datamining, statistics, and mathematics we can talk about predictor variables (X) and predicted/objective variables (y).
+#Split the dataset in X and y datasets. (1 point)
+
+
+
+#5)In datmining the model is trained with one datassed and tested with new unseen data. Prepare the train and test datasets.
+# Which test % leaves sikitlear by default? Change it to use only 30%? (1 points)
+
+
+
+#6) Build and train the DummyClassifier with strategy="most_frequent" and a GaussianNB models using the previously created Train datasets. (3 points)
+
+
+
+#7) Compare the scores and conusion matrixes of the 2 models. Results are bad with both techniques.
+# Naibe bayes is a probabilistic model predicts the most probable ansher acording to the training set.
+# DummyClassifier with mostcommon strategy predicts allways the most common class seen in the training dataset.
+# Visualize both confusion_matrix. And accuracy_score.
+# Explain what's happening here. (3 points)
+
+
+
+#8) Change the datasset and do the same steps for the bank dataset. Here both techniques get good results can you explain why? (6 points)
+
+

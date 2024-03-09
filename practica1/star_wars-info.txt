@@ -1,0 +1,17 @@
+Data de:
+https://www.kaggle.com/datasets/jsphyg/star-wars
+
+Atributs:
+name: Nom del personatge
+height: Altura del personatge
+hair_color: color de cabells
+skin_color: color de pell
+eye_color: color d'ulls
+birth_year: any de neixement
+sex: sexe del personatge
+gender: genere del personatge
+homeworld: mon d'on es el personatge
+species: especie a la que pertany el personatge
+films: pelicules on surt el personatge
+vehicles: quins vehicles te
+starships: quines naus te
