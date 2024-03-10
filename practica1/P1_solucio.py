@@ -47,11 +47,12 @@ data.head()
 #If some of them are not relevant delete them. Give the reason why you delete the variables. (1 point)
 
 
-#exemple de resposta
-#Com que soc un friki de starwars, he vist totes les pelicules i series puc assegurar que aquestes variables no son relevants. Les elimino.
+# exemple de resposta Com que soc un friki de starwars, he vist totes les pelicules i series puc assegurar que
+# aquestes variables no son relevants. Les elimino.
 data=data.drop(['name','films','vehicles','starships'],axis=1)
 
-#eliminem els nans no es demana a aquest apartat pero per mes endavant ho necesitem perque son registres amb masses buits i no aporten res....
+# eliminem els nans no es demana a aquest apartat pero per mes endavant ho necesitem perque son registres amb masses
+# buits i no aporten res....
 data=data.dropna()
 
 

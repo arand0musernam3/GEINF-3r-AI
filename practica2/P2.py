@@ -1,6 +1,7 @@
 # NAME: Aniol Juanola Vilalta (u1978893)
+import matplotlib.pyplot as plt
 import pandas as pd
-from graphviz import Graph
+from matplotlib import pyplot
 
 
 def read_model():
@@ -20,6 +21,8 @@ def read_model():
     le_region.fit(df["region"])
     df["region"] = le_region.transform(df["region"])
     df["paid"] = le_paid.fit_transform(df["paid"])  # equivalent
+
+    # the model is ready to be used
     return df
 
 
@@ -42,7 +45,7 @@ X_train, X_test, Y_Train, Y_test = train_test_split(x, y)
 # 2) Build a decision tree for predicting the charge amount of the medical costs.
 # Use all the variables in the dataset, leave all the tree parameters by default.
 # Obtain the R2 and MAPE metrics with the train dataset and the test dataset.
-# Is a good model? Why? Justify your answer (1 points)
+# Is a good model? Why? Justify your answer (1 point)
 from sklearn.tree import DecisionTreeRegressor
 
 clf = DecisionTreeRegressor()
@@ -63,7 +66,7 @@ print()
 # MAPE score: 0.3916155811493374
 
 # We can see that this model wouldn't be ideal, specially considering that the mean absolute percentage error is almost
-# 40%. The R2 parameter isn't great either, it should be higher than 0.9
+# 40%. The R2 parameter isn't great either, it should be closer to 1.
 
 # 3) Delete the “patient” variable and set “max_depth” parameter to 4.
 # Obtain the R2 and MAPE metrics with the train dataset and the test dataset again.
@@ -92,7 +95,8 @@ print()
 # MAPE score: 0.30560919679955606
 
 # Both the R2 and MAPE score show better results than in the previous iteration. I wouldn't still consider it a good
-# model, as the MAPE score is over 30% and R2 below 90%, but it's quite better than the previous one.
+# model, as the MAPE score is over 30% and R2 below 90%, but it's quite better than the previous one. The improvement
+# is because the tree's depth is reduced, meaning that there will be less over-fitment of the training data.
 
 # 4) Construct the best model you can find for “charges”.
 # Justify what you do and why you do each change and step (preprocess, variables, parameters, ….).
@@ -120,43 +124,66 @@ x = df2.drop(columns=["charges"])
 y = df2["charges"]
 
 # In order to test the model, we will use cross-validation with KFold as it is a better way of finding the best model
-# out of the data that we have. The chosen K for this example has been 10:
+# out of the data that we have. The chosen K for this example has been 5. Furthermore, we will analyse the R2 score
+# and MAPE score for each of the criteria and the tree's depth to get the best and simpler model:
 
 from sklearn.model_selection import KFold
 
-k = 10
+k = 5
 kf = KFold(n_splits=k)
-model = DecisionTreeRegressor(max_depth=4,
-                              criterion="absolute_error")  # TODO mirar els criterions que potser n'hi ha de més útils
 
-r2_scores = []
-mape_scores = []
+fig, (ax1, ax2) = plt.subplots(1, 2)
+fig.suptitle("R2 and MAPE scores")
 
-for train_index, test_index in kf.split(x):
-    X_train, X_test = x.iloc[train_index, :], x.iloc[test_index, :]
-    Y_Train, Y_test = y[train_index], y[test_index]
+for j in ["squared_error", "friedman_mse", "absolute_error", "poisson"]:
+    r2_train_scores, r2_test_scores, mape_train_scores, mape_test_scores = list(), list(), list(), list()
+    for i in range(1, 10):
+        model = DecisionTreeRegressor(max_depth=i,
+                                      criterion=j)
+        r2_scores_train = []
+        r2_scores_test = []
+        mape_scores_train = []
+        mape_scores_test = []
 
-    model.fit(X_train, Y_Train)
-    y_pred = model.predict(X_test)
+        for train_index, test_index in kf.split(x):
+            X_train, X_test = x.iloc[train_index, :], x.iloc[test_index, :]
+            Y_train, Y_test = y[train_index], y[test_index]
 
-    r2_scores.append(r2_score(y_pred, Y_test))
-    mape_scores.append(mean_absolute_percentage_error(y_pred, Y_test))
+            model.fit(X_train, Y_train)
+            y_pred = model.predict(X_train)
+            r2_scores_train.append(r2_score(y_pred, Y_train))
+            mape_scores_train.append(mean_absolute_percentage_error(y_pred, Y_train))
 
-avg_r2 = sum(r2_scores) / k
-avg_mape = sum(mape_scores) / k
+            y_pred = model.predict(X_test)
+            r2_scores_test.append(r2_score(y_pred, Y_test))
+            mape_scores_test.append(mean_absolute_percentage_error(y_pred, Y_test))
 
-print("R2 scores: {}".format(r2_scores))
-print("Avg R2 score: {}".format(avg_r2))
-print("MAPE scores: {}".format(mape_scores))
-print("Avg MAPE score: {}".format(avg_mape))
+        avg_r2_train = sum(r2_scores_train) / k
+        avg_r2_test = sum(r2_scores_test) / k
+        avg_mape_train = sum(mape_scores_train) / k
+        avg_mape_test = sum(mape_scores_test) / k
 
-# The final model is as good as the one calculated before, according to the data from running the code on my laptop:
-# Avg R2 score: 0.826895139728552
-# Avg MAPE score: 0.3487349653902131
+        r2_train_scores.append(avg_r2_train)
+        r2_test_scores.append(avg_r2_test)
+        mape_train_scores.append(avg_mape_train)
+        mape_test_scores.append(avg_mape_test)
 
-# On the 6th division, the models seems to work best:
-# R2 score: 0.9165739590630678
-# MAPE score. 0.18087626060005624
+    # plot the graph for each criterion
+    ax1.plot(range(1, 10), r2_train_scores, "-o", label=str("Train_" + j))
+    ax1.plot(range(1, 10), r2_test_scores, "-s", label=str("Test_" + j))
+    ax2.plot(range(1, 10), mape_train_scores, "-o", label=str("Train_" + j))
+    ax2.plot(range(1, 10), mape_test_scores, "-s", label=str("Test_" + j))
+ax1.legend(loc="lower right")
+ax1.set_title("R2 scores for each criterion and depth")
+ax2.legend(loc="upper right")
+ax2.set_title("MAPE scores for each criterion and depth")
+plt.show()  # Must close plot window for the program to continue.
+
+# After looking at the plot (https://imgur.com/Y0DcjBz), we can determine that the best model is the one that uses
+# the friedman criterion because, at depth 3, its test results seem best both in terms of R2 score and of MAPE score.
+# Furthermore, the lower the depth gets the more over-fitted the model becomes, so having a depth 3 tree will make it
+# both simple (as in understandable for humans) and quick to run. The over-fitment can be appreciated for all the
+# criteria showcased (please note that Tests have a square pattern while training data has a circle pattern).
 
 """
 Second model
@@ -187,7 +214,7 @@ clf.fit(X_train, Y_Train)
 
 y_pred = clf.predict(X_test)
 
-from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, recall_score, precision_score
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
 
 print(classification_report(Y_test, y_pred))
 print()
@@ -210,7 +237,8 @@ print("Accuracy score: " + str(accuracy_score(Y_test, y_pred)))
 #
 # Accuracy score: 0.9671641791044776
 
-# todo comentar
+# The base model seems good enough, as it shows a 96.7% of accuracy with the test data without removing any columns.
+# The data fed into the algorithm is a good source for training.
 
 # 6) Do the same deleting the variable “patient” and "charges".
 # Compare the results with the ones obtained before. These are good models?
@@ -248,7 +276,9 @@ print("Accuracy score: " + str(accuracy_score(Y_test, y_pred)))
 #
 # Accuracy score: 0.9582089552238806
 
-# todo comentar
+# The accuracy is slightly reduced in this version of the model. Since train_test_split randomly chooses a 75% of the
+# data for training, it is possible that the lower value is based on a poor selection of data rather than the model
+# itself being worse.
 
 # 7) Construct the best model you can find for predicting “paid“ variable.
 # Justify what you do and why you do each change and step  (preprocess, parameters, ….).
@@ -256,7 +286,7 @@ print("Accuracy score: " + str(accuracy_score(Y_test, y_pred)))
 # Visualize the tree you obtain. (2 points)
 df = read_model()
 
-# In order to train this model I will take a different approach.
+# In order to train this model a similar approach has been taken as in the first one.
 # The variable correlation matrix is as useful as in the previous prediction, so we will repeat that but for the "paid"
 # variable. This gives insight into which columns are useful for predicting the paid variable.
 print(df.corr())
@@ -282,7 +312,6 @@ x = df.drop(columns=["paid"])
 # Once again, in order to have the same results all the time, we will use a KNN approach (to avoid the randomness of
 # the train_test_split function).
 
-from matplotlib import pyplot
 
 k = 5
 kf = KFold(n_splits=k)
@@ -320,7 +349,7 @@ pyplot.locator_params(axis='x', nbins=21)
 pyplot.locator_params(axis='y', nbins=11)
 pyplot.show()  # Must close plot window for the program to continue.
 
-# As it can be seen (https://imgur.com/MLBEdSx) the optimal depth is 5 for the "gini" criterion while it is 6 for the
+# As it can be seen (https://imgur.com/Aww1x9W) the optimal depth is 5 for the "gini" criterion while it is 6 for the
 # remaining criteria. Further depth would imply that the model would be over-fitted for the given training data,
 # so it would be less efficient really. The plot also suggests that "gini" is the best method as it approaches both
 # the test data and train data best. So the best model would be the one fitted with the "gini" criterion at a level 5
@@ -338,7 +367,7 @@ model.fit(X_train, Y_Train)
 
 y_pred = model.predict(X_test)
 
-# Importing the libraries and visualizing the graph
+# Importing the libraries and visualizing the graph (https://imgur.com/vnMzwcl)
 import graphviz
 from sklearn.tree import export_graphviz
 
@@ -348,3 +377,5 @@ dot_data = export_graphviz(model, out_file=None, feature_names=["age", "children
 
 graph = graphviz.Source(dot_data)
 graph.view()
+
+#end of the exercise.
