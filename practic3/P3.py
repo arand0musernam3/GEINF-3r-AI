@@ -9,7 +9,7 @@ from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
 import mpl_toolkits.mplot3d  # noqa: F401
 
-# Load the dataset in "steam.csv". We want to perform a clustering using k-means, scikit- learn only implements
+# Load the dataset in "steam.csv". We want to perform a clustering using k-means, scikit-learn only implements
 # Euclidean distance so only accepts numeric attributes, transform all the attributes to numeric. Preprocess the data
 # in other to convert categorical and non-numeric attributes to numeric. (1 point)
 
@@ -69,6 +69,9 @@ print(dataProcessed)
 ## developer or, as a last resort, dropping the instances (which are not many) could still leave a valuable dataset to
 ## work with.
 
+## *Note:* This should have probably been done AFTER scaling the data, not BEFORE.
+## The results would have been more concise as distances between variables would be scaled.
+
 # Clustering needs data to be scaled. If not variables with higher variability will be favoured.
 # Scale the data. (1 point)
 
@@ -98,7 +101,39 @@ model = KMeans(n_clusters=2, init='k-means++')
 model.fit(dataProcessed)
 label = model.predict(dataProcessed)
 u_labels = np.unique(label)
+## The model is now fitted. It is time to determine which information each cluster holds.
 
+## A first approach could be visualizing the data given two axis of the dataset to try and see which differentiates the
+## values in a clearer way.
+
+# for i in dataProcessed.columns:
+#     if i == 'appid':
+#         continue
+#     plt.scatter(dataProcessed['appid'], dataProcessed[i], c=label, cmap='plasma')
+#     plt.xlabel('appid')
+#     plt.ylabel(i)
+#     plt.show()
+
+## After plotting all attributes, we can see that the most relevant ones are 'developer' and 'publisher'. Let's create
+## another 2d plot where the values are correlated.
+
+
+plt.scatter(dataProcessed['developer'], dataProcessed['publisher'], c=label, cmap='plasma')
+plt.xlabel('developer')
+plt.ylabel('publisher')
+plt.show()
+
+## https://imgur.com/a/ngsedpm
+
+## It can be seen that there is a clear separation between the two attributes.
+
+correlation = dataProcessed.corr()
+
+print(correlation) #https://imgur.com/a/GSsCjGw
+
+## We can see that, in fact, these attributes are quite similar and could even be discarded to some extent. The fact
+## that this model is not supervised means that we probably shouldn't, and since it is not specified by the questions
+## it will not be done.
 
 
 # =====================================================================================================
