@@ -125,16 +125,50 @@ plt.show()
 
 ## https://imgur.com/a/ngsedpm
 
-## It can be seen that there is a clear separation between the two attributes.
+## It can be seen that there is a clear separation between the two attributes. The diagonal line implies that lots
+## of the games were published and developed by the same people.
 
 correlation = dataProcessed.corr()
 
-print(correlation) #https://imgur.com/a/GSsCjGw
+print(correlation)  # https://imgur.com/a/GSsCjGw
 
 ## We can see that, in fact, these attributes are quite similar and could even be discarded to some extent. The fact
 ## that this model is not supervised means that we probably shouldn't, and since it is not specified by the questions
 ## it will not be done.
 
+
+## Taking a look at the 3d visualization of the
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+i,j = 1,1 # missing 'appid' on purpose at it has no real meaning
+while i < len(dataProcessed.columns):
+    j = i+1
+    while j < len(dataProcessed.columns):
+        plt.xlabel(dataProcessed.columns[i])
+        plt.ylabel(dataProcessed.columns[j])
+        plt.scatter(dataProcessed[dataProcessed.columns[i]],dataProcessed[dataProcessed.columns[j]],
+                    c=label, cmap='plasma')
+        plt.savefig("./output/" + dataProcessed.columns[i] + "-" + dataProcessed.columns[j] + ".svg")
+        plt.clf()
+        j = j+1
+    i = i+1
+
+
+import sys
+sys.exit(0)
+
+for i in dataProcessed.columns:
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    if i == 'appid' or i == 'developer' or i == 'publisher':
+        continue
+    ax.scatter(dataProcessed[i], dataProcessed['developer'], dataProcessed['publisher'], c=label, cmap='plasma')
+    ax.set_xlabel(i)
+    ax.set_ylabel('developer')
+    ax.set_zlabel('publisher')
+    plt.show()
 
 # =====================================================================================================
 
