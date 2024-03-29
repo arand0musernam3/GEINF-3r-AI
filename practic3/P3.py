@@ -142,33 +142,18 @@ print(correlation)  # https://imgur.com/a/GSsCjGw
 import numpy as np
 import matplotlib.pyplot as plt
 
-i,j = 1,1 # missing 'appid' on purpose at it has no real meaning
-while i < len(dataProcessed.columns):
-    j = i+1
-    while j < len(dataProcessed.columns):
-        plt.xlabel(dataProcessed.columns[i])
-        plt.ylabel(dataProcessed.columns[j])
-        plt.scatter(dataProcessed[dataProcessed.columns[i]],dataProcessed[dataProcessed.columns[j]],
-                    c=label, cmap='plasma')
-        plt.savefig("./output/" + dataProcessed.columns[i] + "-" + dataProcessed.columns[j] + ".svg")
-        plt.clf()
-        j = j+1
-    i = i+1
-
-
-import sys
-sys.exit(0)
-
-for i in dataProcessed.columns:
-    fig = plt.figure()
-    ax = fig.add_subplot(projection='3d')
-    if i == 'appid' or i == 'developer' or i == 'publisher':
-        continue
-    ax.scatter(dataProcessed[i], dataProcessed['developer'], dataProcessed['publisher'], c=label, cmap='plasma')
-    ax.set_xlabel(i)
-    ax.set_ylabel('developer')
-    ax.set_zlabel('publisher')
-    plt.show()
+#i, j = 1, 1  # missing 'appid' on purpose at it has no real meaning
+#while i < len(dataProcessed.columns):
+#    j = i + 1
+#    while j < len(dataProcessed.columns):
+#        plt.xlabel(dataProcessed.columns[i])
+#        plt.ylabel(dataProcessed.columns[j])
+#        plt.scatter(dataProcessed[dataProcessed.columns[i]], dataProcessed[dataProcessed.columns[j]],
+#                    c=label, cmap='plasma')
+#        plt.savefig("./output/" + dataProcessed.columns[i] + "-" + dataProcessed.columns[j] + ".svg")
+#        plt.clf()
+#        j = j + 1
+#    i = i + 1
 
 # =====================================================================================================
 
@@ -178,5 +163,91 @@ for i in dataProcessed.columns:
 # other files... (do what you want to achieve a goal). Try to explain what are you expecting
 # to achieve, what are you doing and what you achieve. (3 points)
 
-###TODO: Mirar què es pot fer que sigui interessant, per exemple intentar agrupar per jocs similars, o per preu
-### envers diversió si es pot, etc.
+## The main idea is to cluster the different video games by two main terms: their respective areas and the price per
+## fun. The ideal would be to have clustered the games which are both more fun from a specific category, because one
+## of the main struggles of gamers is finding a good, similar game to another one you played and enjoyed. This is what
+## this clustering aims to do.
+
+## Setting up the data from all the tables.
+
+steamData = read_model()
+steamTagData = pd.read_csv('steamspy_tag_data.csv')
+
+## We need to combine both into one big dataset. Before, we'll get rid of unnecessary variables which are not correlated
+## at all.
+
+
+
+correlation = steamData.corr()
+print(correlation)  # https://i.imgur.com/x85MUWZ.png
+
+## It can be seen that the name doesn't give any information at all, as it practically is the same as an AppId. The
+## release_date does correlate with the appid, as those are given out in order, so the smaller the number is the older
+## a game is. As we could see in the previous exercise, developer and publisher are most of the time the same so their
+## correlation level is high as well. A similar thing happens with positive and negative ratings, whose values have to
+## add up to 100% and are most of the time opposite. Lastly, the average and median playtime are closely related
+## because those values might be close on most polled games.
+
+## The most interesting variables to us are 'appid' (to match this dataframe with the other one', the 'genres' and
+## 'categories' fields which we'll obtain from the other dataframe), the amount of positive and negative ratings,
+## the average playtime and the price. Let's add the other attributes from the other dataset.
+
+print(steamData.shape)
+print(steamTagData.shape)
+
+mergedData = pd.merge(steamData, steamTagData, on=["appid"])
+print(mergedData)
+
+mergedData = mergedData.drop(columns=["name", "release_date", "developer", "publisher", "required_age", "categories",
+                                      "genres", "achievements", "median_playtime", "owners"])
+
+## now we need to scale the data for the distances to work properly
+
+mergedData = mergedData.dropna()  # we might lose some data, but we've got more than enough to get a decent study
+
+## PROVAREM AMB DBSCAN PQ FA PINTA XUPI GUAI
+
+from sklearn.cluster import HDBSCAN
+k = 8
+model5 = KMeans(n_clusters=k)  # HDBSCAN
+labels5 = model5.fit_predict(mergedData)
+print(labels5)
+
+## https://developers.google.com/machine-learning/clustering/interpret
+
+## Cluster cardinality
+unique_labels5 = np.unique(labels5)
+count_labels5 = [0] * k
+sum_labels5 = [0] * k
+auxMatrix = model5.transform(mergedData)
+for i in labels5:
+    count_labels5[i] = count_labels5[i] + 1
+
+for i in auxMatrix:
+    j = np.argmin(i)
+    sum_labels5[j] = sum_labels5[j] + i[j]
+
+plt.bar(unique_labels5, count_labels5)
+plt.xlabel("Cluster")
+plt.ylabel("Number of occurrences")
+plt.title("Cluster cardinality")
+plt.show()
+
+plt.clf()
+
+## Cluster magnitude
+### Sum of distances from all examples to the centroid of the cluster
+plt.bar(unique_labels5, sum_labels5)
+plt.xlabel("Cluster")
+plt.ylabel("Sum of intracluster distances")
+plt.title("Cluster magnitude")
+plt.show()
+
+## Magnitude vs cardinality
+
+## Performance of similar measures
+## TODO Buscar exemples de jocs semblants que jo conegui i veure si estan pròxims o no.
+##  Valorar si val la pena fer Feature Selection primer!
+
+## Optimum number of clusters
+## TODO Amb HDBSCAN no n'hi ha, però amb Kmeans si!!
