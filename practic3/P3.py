@@ -205,6 +205,8 @@ mergedData = mergedData.drop(columns=["name", "release_date", "developer", "publ
 
 mergedData = mergedData.dropna()  # we might lose some data, but we've got more than enough to get a decent study
 
+scaleColumns(mergedData)
+
 ## PROVAREM AMB DBSCAN PQ FA PINTA XUPI GUAI
 
 from sklearn.cluster import HDBSCAN
@@ -251,3 +253,97 @@ plt.show()
 
 ## Optimum number of clusters
 ## TODO Amb HDBSCAN no n'hi ha, però amb Kmeans si!!
+
+## KNOWN APPIDS (by own experience :) )
+known_appids = {
+    'shooter':[
+        2620,
+        2630,
+        2640,
+        7940,
+        10090,
+        42700,
+        202970,
+        209650,
+        214630,
+        24960,
+        681350,
+        10,
+        80,
+        240,
+        730,
+        273110,
+        227940,
+        306950
+    ],
+    'strategy':[
+        105450,
+        221380,
+        362740,
+        3900,
+        3910,
+        3990,
+        8800,
+        8930,
+        16810,
+        65980,
+        289070,
+        200510,
+        268500,
+        266840,
+        323190
+    ],
+    'car/truck simulators/games':[
+        244210,
+        805550,
+        339790,
+        365960,
+        431600,
+        256330,
+        354160,
+        458770,
+        621830,
+        310560,
+        421020,
+        690790,
+        17430,
+        24870,
+        47870,
+        7200,
+        11020,
+        228760,
+        232910,
+        243360,
+        375900,
+        600720
+    ],
+    'singleplayer':[
+        400,
+        620,
+        49520,
+        261640,
+        729040,
+        683320,
+        48000,
+        304430,
+        264710,
+        848450,
+        391540,
+        50,
+        70,
+        130,
+        220,
+        280,
+        320,
+        340,
+        360,
+        380,
+        420,
+        17410,
+        319630,
+        532210,
+        554620
+    ]
+}
+
+print (known_appids)
