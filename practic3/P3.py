@@ -205,29 +205,31 @@ mergedData = mergedData.drop(columns=["name", "release_date", "developer", "publ
 
 mergedData = mergedData.dropna()  # we might lose some data, but we've got more than enough to get a decent study
 
-scaleColumns(mergedData)
+# scaleColumns(mergedData)
 
 ## PROVAREM AMB DBSCAN PQ FA PINTA XUPI GUAI
 
 from sklearn.cluster import HDBSCAN
-k = 8
-model5 = KMeans(n_clusters=k)  # HDBSCAN
+#k = 8
+#model5 = KMeans(n_clusters=k)
+model5 = HDBSCAN()
 labels5 = model5.fit_predict(mergedData)
-print(labels5)
 
 ## https://developers.google.com/machine-learning/clustering/interpret
 
 ## Cluster cardinality
 unique_labels5 = np.unique(labels5)
+k = len(unique_labels5)
+print("k=", k)
 count_labels5 = [0] * k
 sum_labels5 = [0] * k
-auxMatrix = model5.transform(mergedData)
+#auxMatrix = model5.transform(mergedData)
 for i in labels5:
     count_labels5[i] = count_labels5[i] + 1
 
-for i in auxMatrix:
-    j = np.argmin(i)
-    sum_labels5[j] = sum_labels5[j] + i[j]
+# for i in auxMatrix:
+#     j = np.argmin(i)
+#     sum_labels5[j] = sum_labels5[j] + i[j]
 
 plt.bar(unique_labels5, count_labels5)
 plt.xlabel("Cluster")
@@ -239,11 +241,12 @@ plt.clf()
 
 ## Cluster magnitude
 ### Sum of distances from all examples to the centroid of the cluster
-plt.bar(unique_labels5, sum_labels5)
-plt.xlabel("Cluster")
-plt.ylabel("Sum of intracluster distances")
-plt.title("Cluster magnitude")
-plt.show()
+#plt.bar(unique_labels5, sum_labels5)
+#plt.xlabel("Cluster")
+#plt.ylabel("Sum of intracluster distances")
+#plt.title("Cluster magnitude")
+#plt.show()
+#plt.clf()
 
 ## Magnitude vs cardinality
 
@@ -253,6 +256,7 @@ plt.show()
 
 ## Optimum number of clusters
 ## TODO Amb HDBSCAN no n'hi ha, però amb Kmeans si!!
+## TODO mirar els centroides!
 
 ## KNOWN APPIDS (by own experience :) )
 known_appids = {
@@ -346,4 +350,22 @@ known_appids = {
     ]
 }
 
-print (known_appids)
+## let's check whether these are on the same cluster or not:
+auxArray2 = mergedData['appid'].values
+for key, value in known_appids.items():
+    auxArray = [0] * k
+    for i in value:
+        instance = np.where(auxArray2 == i)
+        auxLabel = labels5[int(instance[0])]
+        auxArray[auxLabel] = auxArray[auxLabel] + 1
+
+
+
+    plt.bar(unique_labels5, auxArray)
+    plt.xlabel("Cluster")
+    plt.ylabel("Number of instances")
+    plt.title(key + " testing")
+    plt.show()
+    plt.clf()
+
+print(known_appids)
