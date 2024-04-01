@@ -72,6 +72,7 @@ print(dataProcessed)
 ## *Note:* This should have probably been done AFTER scaling the data, not BEFORE.
 ## The results would have been more concise as distances between variables would be scaled.
 
+
 # Clustering needs data to be scaled. If not variables with higher variability will be favoured.
 # Scale the data. (1 point)
 
@@ -90,70 +91,106 @@ print(dataProcessed)
 # centers (cluster_centers_ attribute on your fitted k-means). Try to understand what kind
 # of information each cluster has. (2 points)
 
+## The model is now fitted. It is time to determine which information each cluster holds.
 
-# TODO: mirar quin preprocessat més es pot fer, fer gràfics de resultats, etc. donar una explicació raonable
-# https://scikit-learn.org/stable/auto_examples/cluster/plot_cluster_iris.html#sphx-glr-auto-examples-cluster-plot-cluster-iris-py
-# https://towardsdatascience.com/k-means-clustering-algorithm-applications-evaluation-methods-and-drawbacks-aa03e644b48a
-
-
-# =====================================================================================================
 model = KMeans(n_clusters=2, init='k-means++')
 model.fit(dataProcessed)
 label = model.predict(dataProcessed)
 u_labels = np.unique(label)
-## The model is now fitted. It is time to determine which information each cluster holds.
+cluster_centers = model.cluster_centers_
 
-## A first approach could be visualizing the data given two axis of the dataset to try and see which differentiates the
-## values in a clearer way.
+print("These are the cluster centers: ")
+print(cluster_centers)
 
-# for i in dataProcessed.columns:
-#     if i == 'appid':
-#         continue
-#     plt.scatter(dataProcessed['appid'], dataProcessed[i], c=label, cmap='plasma')
-#     plt.xlabel('appid')
-#     plt.ylabel(i)
-#     plt.show()
+print("These are the differences between the values of each cluster: ")
+clustersDiffs = {}
+for i in range(0, len(cluster_centers[0])):
+    clustersDiffs[dataProcessed.columns.values[i]] = (abs(cluster_centers[0][i] - cluster_centers[1][i]))
 
-## After plotting all attributes, we can see that the most relevant ones are 'developer' and 'publisher'. Let's create
-## another 2d plot where the values are correlated.
+sortedClusterDiffs = sorted(clustersDiffs.items(), key=lambda x: x[1], reverse=True)
+print(sortedClusterDiffs)
 
-
-plt.scatter(dataProcessed['developer'], dataProcessed['publisher'], c=label, cmap='plasma')
-plt.xlabel('developer')
-plt.ylabel('publisher')
-plt.show()
-
-## https://imgur.com/a/ngsedpm
-
-## It can be seen that there is a clear separation between the two attributes. The diagonal line implies that lots
-## of the games were published and developed by the same people.
-
-correlation = dataProcessed.corr()
-
-print(correlation)  # https://imgur.com/a/GSsCjGw
-
-## We can see that, in fact, these attributes are quite similar and could even be discarded to some extent. The fact
-## that this model is not supervised means that we probably shouldn't, and since it is not specified by the questions
-## it will not be done.
+## These are the cluster centers:
+## [[5.43986610e-01 4.99980074e-01 8.93933430e-01 9.84082044e-01
+##   4.93653679e-01 4.81964953e-01 2.14336647e-02 8.73972296e-01
+##   3.78954399e-01 6.98635563e-03 3.05540161e-04 3.03354638e-04
+##   7.35943495e-04 7.17489103e-04 1.64055618e-01 1.53813050e-02]
+##  [5.76653232e-01 4.99796939e-01 8.92560684e-01 9.76925141e-01
+##   5.02259740e-01 4.96235076e-01 1.72763319e-02 2.25835357e-01
+##   3.89378027e-01 1.22556884e-03 4.81894744e-04 6.17905987e-04
+##   8.56822156e-04 8.35432709e-04 1.18921981e-01 1.30138774e-02]]
+## These are the differences between the values of each cluster:
+## [('categories', 0.6481369386506869), ('owners', 0.045133637731246845), ('appid', 0.032666621908302274),
+##  ('publisher', 0.014270123526929412), ('genres', 0.010423627450994288), ('developer', 0.008606060640007573),
+##  ('english', 0.007156902674477217), ('achievements', 0.005760786785031495), ('required_age', 0.0041573328227511),
+##  ('price', 0.002367427538161909), ('release_date', 0.0013727460787621437), ('negative_ratings', 0.0003145513490738414),
+##  ('name', 0.00018313489276822192), ('positive_ratings', 0.00017635458314126324),
+##  ('average_playtime', 0.0001208786613492701), ('median_playtime', 0.00011794360557845849)]
 
 
-## Taking a look at the 3d visualization of the
-
+## It can be seen that the main difference in the clustering has been in the 'categories' column. Let's plot some graphs
+## to see this in a visual manner.
 import numpy as np
 import matplotlib.pyplot as plt
 
-#i, j = 1, 1  # missing 'appid' on purpose at it has no real meaning
-#while i < len(dataProcessed.columns):
-#    j = i + 1
-#    while j < len(dataProcessed.columns):
-#        plt.xlabel(dataProcessed.columns[i])
-#        plt.ylabel(dataProcessed.columns[j])
-#        plt.scatter(dataProcessed[dataProcessed.columns[i]], dataProcessed[dataProcessed.columns[j]],
-#                    c=label, cmap='plasma')
-#        plt.savefig("./output/" + dataProcessed.columns[i] + "-" + dataProcessed.columns[j] + ".svg")
-#        plt.clf()
-#        j = j + 1
-#    i = i + 1
+
+def printGraphs():
+    w, j = 1, 1  # missing 'appid' on purpose at it has no real meaning
+    while w < len(dataProcessed.columns):
+        j = w + 1
+        while j < len(dataProcessed.columns):
+            plt.xlabel(dataProcessed.columns[w])
+            plt.ylabel(dataProcessed.columns[j])
+            plt.scatter(dataProcessed[dataProcessed.columns[w]], dataProcessed[dataProcessed.columns[j]],
+                        c=label, cmap='plasma')
+            plt.savefig("./output/ex4/" + dataProcessed.columns[w] + "-" + dataProcessed.columns[j] + ".pdf")
+            plt.clf()
+            j = j + 1
+        w = w + 1
+
+
+# printGraphs() - disabled for speeding up the code
+## NOTE: Graphs are saved in a "./output" folder, which must be created beforehand. Otherwise, the program crashes.
+
+## The graphs show that, as expected, the plots which have the 'categories' column clearly show the difference between
+## the clustering groups. It can be seen that the frontier between the values is located at the 0.5 mark
+## approximately, which means that games from categories that have been normalized to lower values will be clustered
+## together and separated from games that have been clustered with higher values.
+
+## When looking at the other attributes, no clear evidence of clustering can be seen. We cannot extract conclusions
+## from the graphs themselves.
+
+## Let's also take a look at the correlation between variables:
+correlation = dataProcessed.corr()  # https://imgur.com/a/GSsCjGw
+
+## It can be seen that the 'categories' attribute has no real correlation with any other variable, so it makes sense
+## that when grouping with this column the difference with the other attributes is relatively low.
+
+## Lastly, we can use a PCA algorithm to reduce the dimension of the attributes and take a look at a 2D representation.
+
+from sklearn.decomposition import PCA
+
+pca = PCA(n_components=2)
+dataReduced = pca.fit_transform(dataProcessed)
+plt.scatter(dataReduced[:, 0], dataReduced[:, 1], c=label, s=50, cmap='plasma')
+plt.scatter(model.cluster_centers_[:, 0], model.cluster_centers_[:, 1], marker='*', s=200, c='#000000')
+plt.xlabel('Main attribute 1')
+plt.ylabel('Main attribute 2')
+plt.title('KMEANS (Reduced by PCA)')
+plt.show()
+
+## Let's check which two attributes were used by the PCA:
+
+attributes = list(dataProcessed.columns)
+
+atr1 = attributes[pca.components_[0].argmax()]
+atr2 = attributes[pca.components_[1].argmax()]
+
+print("The main attributes from the PCA reduction are: ", atr1, " ", atr2)
+## The main attributes from the PCA reduction are:  publisher   categories
+
+## In this case, publisher also had a significant weight in the PCA reduction, even though the separation between
+## the two centroids is minimal. We can assume that the publisher also had an important role in the clustering process.
 
 # =====================================================================================================
 
@@ -177,9 +214,8 @@ steamTagData = pd.read_csv('steamspy_tag_data.csv')
 ## at all.
 
 
-
-correlation = steamData.corr()
-print(correlation)  # https://i.imgur.com/x85MUWZ.png
+correlation = steamData.corr()  # https://i.imgur.com/x85MUWZ.png
+print(correlation)
 
 ## It can be seen that the name doesn't give any information at all, as it practically is the same as an AppId. The
 ## release_date does correlate with the appid, as those are given out in order, so the smaller the number is the older
@@ -196,22 +232,22 @@ print(steamData.shape)
 print(steamTagData.shape)
 
 mergedData = pd.merge(steamData, steamTagData, on=["appid"])
-print(mergedData)
-
 mergedData = mergedData.drop(columns=["name", "release_date", "developer", "publisher", "required_age", "categories",
                                       "genres", "achievements", "median_playtime", "owners"])
+print(mergedData)
 
 ## now we need to scale the data for the distances to work properly
 
 mergedData = mergedData.dropna()  # we might lose some data, but we've got more than enough to get a decent study
 
-# scaleColumns(mergedData)
+scaleColumns(mergedData)
 
 ## PROVAREM AMB DBSCAN PQ FA PINTA XUPI GUAI
 
 from sklearn.cluster import HDBSCAN
-#k = 8
-#model5 = KMeans(n_clusters=k)
+
+# k = 8
+# model5 = KMeans(n_clusters=k)
 model5 = HDBSCAN()
 labels5 = model5.fit_predict(mergedData)
 
@@ -223,7 +259,7 @@ k = len(unique_labels5)
 print("k=", k)
 count_labels5 = [0] * k
 sum_labels5 = [0] * k
-#auxMatrix = model5.transform(mergedData)
+# auxMatrix = model5.transform(mergedData)
 for i in labels5:
     count_labels5[i] = count_labels5[i] + 1
 
@@ -241,26 +277,19 @@ plt.clf()
 
 ## Cluster magnitude
 ### Sum of distances from all examples to the centroid of the cluster
-#plt.bar(unique_labels5, sum_labels5)
-#plt.xlabel("Cluster")
-#plt.ylabel("Sum of intracluster distances")
-#plt.title("Cluster magnitude")
-#plt.show()
-#plt.clf()
+# plt.bar(unique_labels5, sum_labels5)
+# plt.xlabel("Cluster")
+# plt.ylabel("Sum of intracluster distances")
+# plt.title("Cluster magnitude")
+# plt.show()
+# plt.clf()
 
 ## Magnitude vs cardinality
 
 ## Performance of similar measures
-## TODO Buscar exemples de jocs semblants que jo conegui i veure si estan pròxims o no.
-##  Valorar si val la pena fer Feature Selection primer!
-
-## Optimum number of clusters
-## TODO Amb HDBSCAN no n'hi ha, però amb Kmeans si!!
-## TODO mirar els centroides!
-
-## KNOWN APPIDS (by own experience :) )
+## KNOWN APPIDS (I created this list based on my personal experiences of the games and genres that I have played)
 known_appids = {
-    'shooter':[
+    'shooter': [
         2620,
         2630,
         2640,
@@ -280,7 +309,7 @@ known_appids = {
         227940,
         306950
     ],
-    'strategy':[
+    'strategy': [
         105450,
         221380,
         362740,
@@ -297,7 +326,7 @@ known_appids = {
         266840,
         323190
     ],
-    'car/truck simulators/games':[
+    'car/truck simulators/games': [
         244210,
         805550,
         339790,
@@ -321,7 +350,7 @@ known_appids = {
         375900,
         600720
     ],
-    'singleplayer':[
+    'singleplayer': [
         400,
         620,
         49520,
@@ -359,8 +388,6 @@ for key, value in known_appids.items():
         auxLabel = labels5[int(instance[0])]
         auxArray[auxLabel] = auxArray[auxLabel] + 1
 
-
-
     plt.bar(unique_labels5, auxArray)
     plt.xlabel("Cluster")
     plt.ylabel("Number of instances")
@@ -368,4 +395,7 @@ for key, value in known_appids.items():
     plt.show()
     plt.clf()
 
-print(known_appids)
+
+## Optimum number of clusters
+## TODO Amb HDBSCAN no n'hi ha, però amb Kmeans si!!
+## TODO mirar els centroides!
