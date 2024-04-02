@@ -326,7 +326,7 @@ known_appids = {
         266840,
         323190
     ],
-    'car/truck simulators/games': [
+    'car_truck simulators': [
         244210,
         805550,
         339790,

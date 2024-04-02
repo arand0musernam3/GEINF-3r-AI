@@ -1,6 +1,9 @@
 # NAME: Aniol Juanola Vilalta (u1978893)
 import numpy as np
 import pandas as pd
+import os
+
+from scipy.spatial.distance import cdist
 from sklearn.metrics import silhouette_samples
 from sklearn.preprocessing import LabelEncoder
 from sklearn.impute import KNNImputer
@@ -75,31 +78,144 @@ scaler = MinMaxScaler()
 scaled_features = pd.DataFrame(scaler.fit_transform(mergedData))
 scaled_features.columns = mergedData.columns
 
+## Performance of similar measures
+## KNOWN APPIDS (I created this list based on my personal experiences of the games and genres that I have played)
+known_appids = {
+    'shooter': [
+        2620,
+        2630,
+        2640,
+        7940,
+        10090,
+        42700,
+        202970,
+        209650,
+        214630,
+        24960,
+        681350,
+        10,
+        80,
+        240,
+        730,
+        273110,
+        227940,
+        306950
+    ],
+    'strategy': [
+        105450,
+        221380,
+        362740,
+        3900,
+        3910,
+        3990,
+        8800,
+        8930,
+        16810,
+        65980,
+        289070,
+        200510,
+        268500,
+        266840,
+        323190
+    ],
+    'car_simulator_games': [
+        244210,
+        805550,
+        339790,
+        365960,
+        431600,
+        256330,
+        354160,
+        458770,
+        621830,
+        310560,
+        421020,
+        690790,
+        17430,
+        24870,
+        47870,
+        7200,
+        11020,
+        228760,
+        232910,
+        243360,
+        375900,
+        600720
+    ],
+    'singleplayer': [
+        400,
+        620,
+        49520,
+        261640,
+        729040,
+        683320,
+        48000,
+        304430,
+        264710,
+        848450,
+        391540,
+        50,
+        70,
+        130,
+        220,
+        280,
+        320,
+        340,
+        360,
+        380,
+        420,
+        17410,
+        319630,
+        532210,
+        554620
+    ]
+}
 
-for k in range(2,50):
+distortions = []
+inertias = []
+mapping1 = {}
+mapping2 = {}
+labels5k = []
+clusters5k = []
+K = range(2,15)
+for k in K:
     model5 = KMeans(n_clusters=k)
     labels5 = model5.fit_predict(mergedData)
+    if k == 5:
+        labels5k = labels5
+        clusters5k = model5.cluster_centers_
+    auxMatrix = model5.transform(mergedData)
 
-    ## https://developers.google.com/machine-learning/clustering/interpret
+    if not os.path.exists("output/ex5/"+str(k)):
+        os.mkdir("output/ex5/"+str(k))
 
-    ## Cluster cardinality
+    distortions.append(sum(np.min(cdist(mergedData, model5.cluster_centers_,
+                                        'euclidean'), axis=1)) / mergedData.shape[0])
+    inertias.append(model5.inertia_)
+
+    mapping1[k] = sum(np.min(cdist(mergedData, model5.cluster_centers_,
+                                   'euclidean'), axis=1)) / mergedData.shape[0]
+    mapping2[k] = model5.inertia_
+
+
+
     unique_labels5 = np.unique(labels5)
     print("k=", k)
     count_labels5 = [0] * k
     sum_labels5 = [0] * k
-    auxMatrix = model5.transform(mergedData)
     for i in labels5:
         count_labels5[i] = count_labels5[i] + 1
 
     for i in auxMatrix:
         j = np.argmin(i)
-    sum_labels5[j] = sum_labels5[j] + i[j]
+        sum_labels5[j] = sum_labels5[j] + i[j]
 
+    ## Cluster cardinality
     plt.bar(unique_labels5, count_labels5)
     plt.xlabel("Cluster")
     plt.ylabel("Number of occurrences")
     plt.title("Cluster cardinality")
-    plt.savefig("./output/ex5/" + str(k) + "-cardinality.pdf")
+    plt.savefig("./output/ex5/" + str(k) + "/cardinality.png")
     plt.clf()
 
     ## Cluster magnitude
@@ -108,101 +224,8 @@ for k in range(2,50):
     plt.xlabel("Cluster")
     plt.ylabel("Sum of intracluster distances")
     plt.title("Cluster magnitude")
-    plt.savefig("./output/ex5/" + str(k) + "-magnitude.pdf")
+    plt.savefig("./output/ex5/" + str(k) + "/magnitude.png")
     plt.clf()
-
-    ## Performance of similar measures
-    ## KNOWN APPIDS (I created this list based on my personal experiences of the games and genres that I have played)
-    known_appids = {
-        'shooter': [
-            2620,
-            2630,
-            2640,
-            7940,
-            10090,
-            42700,
-            202970,
-            209650,
-            214630,
-            24960,
-            681350,
-            10,
-            80,
-            240,
-            730,
-            273110,
-            227940,
-            306950
-        ],
-        'strategy': [
-            105450,
-            221380,
-            362740,
-            3900,
-            3910,
-            3990,
-            8800,
-            8930,
-            16810,
-            65980,
-            289070,
-            200510,
-            268500,
-            266840,
-            323190
-        ],
-        'car/truck simulators/games': [
-            244210,
-            805550,
-            339790,
-            365960,
-            431600,
-            256330,
-            354160,
-            458770,
-            621830,
-            310560,
-            421020,
-            690790,
-            17430,
-            24870,
-            47870,
-            7200,
-            11020,
-            228760,
-            232910,
-            243360,
-            375900,
-            600720
-        ],
-        'singleplayer': [
-            400,
-            620,
-            49520,
-            261640,
-            729040,
-            683320,
-            48000,
-            304430,
-            264710,
-            848450,
-            391540,
-            50,
-            70,
-            130,
-            220,
-            280,
-            320,
-            340,
-            360,
-            380,
-            420,
-            17410,
-            319630,
-            532210,
-            554620
-        ]
-    }
 
     ## let's check whether these are on the same cluster or not:
     auxArray2 = mergedData['appid'].values
@@ -217,9 +240,39 @@ for k in range(2,50):
         plt.xlabel("Cluster")
         plt.ylabel("Number of instances")
         plt.title(key + " testing")
-        plt.savefig("./output/ex5/" + str(k) + "-" + key + ".pdf")
+        plt.savefig("./output/ex5/" + str(k) + "/" + key + ".png")
         plt.clf()
 
-## Optimum number of clusters
-## TODO Amb HDBSCAN no n'hi ha, però amb Kmeans si!!
-## TODO mirar els centroides!
+## Elbow method
+plt.plot(K, inertias, 'bx-')
+plt.xlabel('Values of K')
+plt.ylabel('Inertia')
+plt.title('The Elbow Method')
+plt.savefig("./output/ex5/elbowInertiaByK.png")
+
+
+## It can be seen that the optimal number of clusters is at 5 or 6. Let's study them by taking a look at the
+## generated graphs.
+
+# ## K = 5 We can see that the cardinality of the clusters is similar except for the number 0. This could indicate
+# that the group 0 is not ideal. In terms of the magnitude, the same applies. When checking with the preset of games,
+# we can see the following: most games seem to have landed in one or two groups, with the exception of the # car
+# simulator games (it must be noted that some are simulators and some are arcade games). # The groups are the
+# following, ordered by cardinality: - Singleplayer: 0, 4 - Shooters: 0, 4 - Car games: 4, 0 - Strategy: 0,
+# 4 This clustering method succeeded in grouping the games together but has grouped them in the same groups,
+# despite having different categories. It does not work as intended initially. Let's take a look at examples from the
+# different groups to grasp what kind of grouping has been done underneath by taking a look at the first 200 examples.
+
+print(mergedData.columns)
+print(clusters5k)
+
+# cluster primer de 0 al 1165.
+
+### K = 6
+## We can see that something similar happens in this grouping, but this time with group 4. The same applies
+## to magnitude. When checking with the preset of games, we can see the following:
+## The car games are not sorted properly, apparently.
+## The shooter games have been clustered into two groups mainly, we could consider that ok!
+## The singleplayer games are mainly found on cluster nº 4, so that is what we expected.
+## Strategy games are clustered into two defined groups, which is close to the single group that we expected.
+
