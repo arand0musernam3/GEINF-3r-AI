@@ -1,13 +1,14 @@
 # NAME: Aniol Juanola Vilalta (u1978893)
+import os
 import numpy as np
 import pandas as pd
-from sklearn.metrics import silhouette_samples
+from scipy.spatial.distance import cdist
 from sklearn.preprocessing import LabelEncoder
 from sklearn.impute import KNNImputer
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.cluster import KMeans
-import matplotlib.pyplot as plt
-import mpl_toolkits.mplot3d  # noqa: F401
+
+# =====================================================================================================
 
 # Load the dataset in "steam.csv". We want to perform a clustering using k-means, scikit-learn only implements
 # Euclidean distance so only accepts numeric attributes, transform all the attributes to numeric. Preprocess the data
@@ -44,6 +45,17 @@ def read_model():
 
 data = read_model()
 
+if not os.path.exists("output/"):
+    os.mkdir("output/")
+
+if not os.path.exists("output/ex4"):
+    os.mkdir("output/ex4")
+
+if not os.path.exists("output/ex5"):
+    os.mkdir("output/ex5")
+
+# =====================================================================================================
+
 # Fill the NaN values in the dataset. Use A KNN algorithm. Was a good decision to fill these
 # values using KNN or is better to give them a fix value or just delete them? What will
 # happen in each case? (3 points)
@@ -72,6 +84,7 @@ print(dataProcessed)
 ## *Note:* This should have probably been done AFTER scaling the data, not BEFORE.
 ## The results would have been more concise as distances between variables would be scaled.
 
+# =====================================================================================================
 
 # Clustering needs data to be scaled. If not variables with higher variability will be favoured.
 # Scale the data. (1 point)
@@ -86,6 +99,10 @@ def scaleColumns(df):
 
 dataProcessed = scaleColumns(dataProcessed)
 print(dataProcessed)
+
+## The data is now scaled between 0 and 1, so that differences between the different columns are the same.
+
+# =====================================================================================================
 
 # Fit a k-means clustering with 2 clusters and perform the prediction. Retrieve the cluster
 # centers (cluster_centers_ attribute on your fitted k-means). Try to understand what kind
@@ -149,8 +166,7 @@ def printGraphs():
         w = w + 1
 
 
-# printGraphs() - disabled for speeding up the code
-## NOTE: Graphs are saved in a "./output" folder, which must be created beforehand. Otherwise, the program crashes.
+printGraphs()
 
 ## The graphs show that, as expected, the plots which have the 'categories' column clearly show the difference between
 ## the clustering groups. It can be seen that the frontier between the values is located at the 0.5 mark
@@ -200,13 +216,12 @@ print("The main attributes from the PCA reduction are: ", atr1, " ", atr2)
 # other files... (do what you want to achieve a goal). Try to explain what are you expecting
 # to achieve, what are you doing and what you achieve. (3 points)
 
-## The main idea is to cluster the different video games by two main terms: their respective areas and the price per
-## fun. The ideal would be to have clustered the games which are both more fun from a specific category, because one
-## of the main struggles of gamers is finding a good, similar game to another one you played and enjoyed. This is what
-## this clustering aims to do.
+## The main idea is to cluster the different video games by their respective areas and categories into "k" big
+## groups. The ideal would be to have clustered the games which are both more fun from a specific category,
+## because one # of the main struggles of gamers is finding a good, similar game to another one you played and
+## enjoyed. This is what # this clustering aims to do.
 
 ## Setting up the data from all the tables.
-
 steamData = read_model()
 steamTagData = pd.read_csv('steamspy_tag_data.csv')
 
@@ -240,51 +255,15 @@ print(mergedData)
 
 mergedData = mergedData.dropna()  # we might lose some data, but we've got more than enough to get a decent study
 
-scaleColumns(mergedData)
+scaler = MinMaxScaler()
+scaledData = pd.DataFrame(scaler.fit_transform(mergedData))
+scaledData.columns = mergedData.columns
 
-## PROVAREM AMB DBSCAN PQ FA PINTA XUPI GUAI
-
-from sklearn.cluster import HDBSCAN
-
-# k = 8
-# model5 = KMeans(n_clusters=k)
-model5 = HDBSCAN()
-labels5 = model5.fit_predict(mergedData)
-
-## https://developers.google.com/machine-learning/clustering/interpret
-
-## Cluster cardinality
-unique_labels5 = np.unique(labels5)
-k = len(unique_labels5)
-print("k=", k)
-count_labels5 = [0] * k
-sum_labels5 = [0] * k
-# auxMatrix = model5.transform(mergedData)
-for i in labels5:
-    count_labels5[i] = count_labels5[i] + 1
-
-# for i in auxMatrix:
-#     j = np.argmin(i)
-#     sum_labels5[j] = sum_labels5[j] + i[j]
-
-plt.bar(unique_labels5, count_labels5)
-plt.xlabel("Cluster")
-plt.ylabel("Number of occurrences")
-plt.title("Cluster cardinality")
-plt.show()
-
-plt.clf()
-
-## Cluster magnitude
-### Sum of distances from all examples to the centroid of the cluster
-# plt.bar(unique_labels5, sum_labels5)
-# plt.xlabel("Cluster")
-# plt.ylabel("Sum of intracluster distances")
-# plt.title("Cluster magnitude")
-# plt.show()
-# plt.clf()
-
-## Magnitude vs cardinality
+## and we need to enhance the distances of the different categories so its impact is higher!
+subset = scaledData.columns.drop(
+    ['appid', 'english', 'positive_ratings', 'negative_ratings', 'price', 'average_playtime'])
+multiplier = 10
+scaledData.loc[:, subset] *= multiplier
 
 ## Performance of similar measures
 ## KNOWN APPIDS (I created this list based on my personal experiences of the games and genres that I have played)
@@ -326,7 +305,7 @@ known_appids = {
         266840,
         323190
     ],
-    'car_truck simulators': [
+    'car_simulator_games': [
         244210,
         805550,
         339790,
@@ -379,23 +358,148 @@ known_appids = {
     ]
 }
 
-## let's check whether these are on the same cluster or not:
-auxArray2 = mergedData['appid'].values
-for key, value in known_appids.items():
-    auxArray = [0] * k
-    for i in value:
-        instance = np.where(auxArray2 == i)
-        auxLabel = labels5[int(instance[0])]
-        auxArray[auxLabel] = auxArray[auxLabel] + 1
+distortions = []
+inertias = []
+mapping1 = {}
+mapping2 = {}
+labelsBestK = []
+clustersBestK = []
+K = range(2, 100)  # the number of clusters could be increased even further
+bestK = -1
+bestInertia = -1
+for k in K:
+    model5 = KMeans(n_clusters=k)
+    labels5 = model5.fit_predict(scaledData)
+    auxMatrix = model5.transform(scaledData)
 
-    plt.bar(unique_labels5, auxArray)
+    if not os.path.exists("output/ex5/" + str(k)):
+        os.mkdir("output/ex5/" + str(k))
+
+    distortions.append(sum(np.min(cdist(scaledData, model5.cluster_centers_,
+                                        'euclidean'), axis=1)) / scaledData.shape[0])
+    inertias.append(model5.inertia_)
+    mapping1[k] = sum(np.min(cdist(scaledData, model5.cluster_centers_,
+                                   'euclidean'), axis=1)) / scaledData.shape[0]
+    mapping2[k] = model5.inertia_
+
+    if bestK == -1 or bestInertia > model5.inertia_:
+        bestK = k
+        bestInertia = model5.inertia_
+        labelsBestK = labels5
+        clustersBestK = model5.cluster_centers_
+
+    unique_labels5 = np.unique(labels5)
+    print("k=", k)
+    count_labels5 = [0] * k
+    sum_labels5 = [0] * k
+    for i in labels5:
+        count_labels5[i] = count_labels5[i] + 1
+
+    for i in auxMatrix:
+        j = np.argmin(i)
+        sum_labels5[j] = sum_labels5[j] + i[j]
+
+    ## Cluster cardinality
+    plt.bar(unique_labels5, count_labels5)
     plt.xlabel("Cluster")
-    plt.ylabel("Number of instances")
-    plt.title(key + " testing")
-    plt.show()
+    plt.ylabel("Number of occurrences")
+    plt.title("Cluster cardinality")
+    plt.savefig("./output/ex5/" + str(k) + "/cardinality.png")
     plt.clf()
 
+    ## Cluster magnitude
+    ### Sum of distances from all examples to the centroid of the cluster
+    plt.bar(unique_labels5, sum_labels5)
+    plt.xlabel("Cluster")
+    plt.ylabel("Sum of intracluster distances")
+    plt.title("Cluster magnitude")
+    plt.savefig("./output/ex5/" + str(k) + "/magnitude.png")
+    plt.clf()
 
-## Optimum number of clusters
-## TODO Amb HDBSCAN no n'hi ha, però amb Kmeans si!!
-## TODO mirar els centroides!
+    ## let's check whether these are on the same cluster or not:
+    auxArray2 = mergedData['appid'].values
+    for key, value in known_appids.items():
+        auxArray = [0] * k
+        for i in value:
+            instance = np.where(auxArray2 == i)
+            auxLabel = labels5[int(instance[0])]
+            auxArray[auxLabel] = auxArray[auxLabel] + 1
+
+        plt.bar(unique_labels5, auxArray)
+        plt.xlabel("Cluster")
+        plt.ylabel("Number of instances")
+        plt.title(key + " testing")
+        plt.savefig("./output/ex5/" + str(k) + "/" + key + ".png")
+        plt.clf()
+
+## Elbow method
+plt.plot(K, inertias, 'bx-')
+plt.xlabel('Values of K')
+plt.ylabel('Inertia')
+plt.title('The Elbow Method')
+plt.savefig("./output/ex5/elbowInertiaByK.png")
+
+## We will let inertia decide what the best clustering method is, as with so many columns it's very difficult to
+## make a decision. We will then look at the Elbow graph to see if the choice matches the plot, and if it has landed
+## on a value we will manually revise the lowest K value.
+
+clustersBestK = pd.DataFrame(clustersBestK, columns=scaledData.columns)
+
+# Define color scale for each column
+color_scales = {
+    'A': {1: 'red', 5: 'green'},
+    'B': {6: 'red', 10: 'green'},
+    'C': {100: 'red', 500: 'green'}
+}
+
+
+# Function to apply colors to the DataFrame
+def apply_colors(value, color_scale):
+    for threshold, color in color_scale.items():
+        if value <= threshold:
+            return color
+    return 'white'  # Default color
+
+
+# Plotting the DataFrame with a color scale
+plt.figure(figsize=(10, 6))
+plt.imshow(clustersBestK.values, cmap='viridis', aspect='auto')
+
+# Set ticks and labels
+plt.xticks(ticks=np.arange(len(clustersBestK.columns)), labels=clustersBestK.columns)
+plt.yticks(ticks=np.arange(len(clustersBestK)), labels=np.arange(len(clustersBestK)))
+
+# Add colorbar
+plt.colorbar(label='Value')
+
+plt.title('DataFrame with Color Scale')
+plt.xlabel('Cluster number')
+plt.ylabel('Attributes (columns of the DataFrame)')
+plt.show()
+
+## Lastly we will print which attributes have been most valuable in clustering for each cluster center:
+print("MOST IMPORTANT COLUMNS FROM EACH CLUSTER")
+for i in range(0, bestK):
+    print("Cluster number " + str(i) + ":")
+    print(clustersBestK.iloc[i].sort_values(ascending=False)[:5])
+    print("============================")
+
+## We can see that different clusters pick different attributes: some pick sports, some pick software, some pick 3d
+## games, 2d games, rpgs... so, in fact, it is doing the clustering that we expected from the beginning,
+## at a very reduced scale.
+
+## Unfortunately, the games that I picked by hand to "test" the model where mostly fitted into one of the two
+## biggest clusters, which contain most of the games from the list. The proposed method isn't very effective when
+## plotting those games.
+
+## By looking at the Elbow Method we can see that the inertia is generally reduced each time that we increase the "k"
+## value, and it looks like it would still not reach an "asymptote". We can tell that the "k" value should be
+## even higher, but it's beyond the capabilities of my computer.
+
+## Overall, it can be seen that this model is not that simple. 100 clusters hardly gives a good result, as there are
+## two enormous clusters and the rest consists of only specific games. With a higher number of clusters,
+## this idea could work better, but my computer doesn't have the power to handle it. Furthermore, the complexity of
+## similarity between games doesn't only reside in the categories of the games themselves, but we should also take
+## into account what other players have played that is similar in order to reinforce the links between games (maybe
+## two games are located in different categories but their players are the same!). Overall, the graphs show that the
+## clustering process isn't ideal and that the number of clusters that we would need would have to be a lot higher.

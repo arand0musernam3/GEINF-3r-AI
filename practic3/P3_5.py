@@ -4,9 +4,7 @@ import pandas as pd
 import os
 
 from scipy.spatial.distance import cdist
-from sklearn.metrics import silhouette_samples
 from sklearn.preprocessing import LabelEncoder
-from sklearn.impute import KNNImputer
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
@@ -75,8 +73,14 @@ print(mergedData)
 mergedData = mergedData.dropna()  # we might lose some data, but we've got more than enough to get a decent study
 
 scaler = MinMaxScaler()
-scaled_features = pd.DataFrame(scaler.fit_transform(mergedData))
-scaled_features.columns = mergedData.columns
+scaledData = pd.DataFrame(scaler.fit_transform(mergedData))
+scaledData.columns = mergedData.columns
+
+## and we need to enhance the distances of the different categories so its impact is higher!
+subset = scaledData.columns.drop(
+    ['appid', 'english', 'positive_ratings', 'negative_ratings', 'price', 'average_playtime'])
+multiplier = 10
+scaledData.loc[:, subset] *= multiplier
 
 ## Performance of similar measures
 ## KNOWN APPIDS (I created this list based on my personal experiences of the games and genres that I have played)
@@ -175,28 +179,31 @@ distortions = []
 inertias = []
 mapping1 = {}
 mapping2 = {}
-labels5k = []
-clusters5k = []
-K = range(2,15)
+labelsBestK = []
+clustersBestK = []
+K = range(2, 100)
+bestK = -1
+bestInertia = -1
 for k in K:
     model5 = KMeans(n_clusters=k)
-    labels5 = model5.fit_predict(mergedData)
-    if k == 5:
-        labels5k = labels5
-        clusters5k = model5.cluster_centers_
-    auxMatrix = model5.transform(mergedData)
+    labels5 = model5.fit_predict(scaledData)
+    auxMatrix = model5.transform(scaledData)
 
-    if not os.path.exists("output/ex5/"+str(k)):
-        os.mkdir("output/ex5/"+str(k))
+    if not os.path.exists("output/ex5/" + str(k)):
+        os.mkdir("output/ex5/" + str(k))
 
-    distortions.append(sum(np.min(cdist(mergedData, model5.cluster_centers_,
-                                        'euclidean'), axis=1)) / mergedData.shape[0])
+    distortions.append(sum(np.min(cdist(scaledData, model5.cluster_centers_,
+                                        'euclidean'), axis=1)) / scaledData.shape[0])
     inertias.append(model5.inertia_)
-
-    mapping1[k] = sum(np.min(cdist(mergedData, model5.cluster_centers_,
-                                   'euclidean'), axis=1)) / mergedData.shape[0]
+    mapping1[k] = sum(np.min(cdist(scaledData, model5.cluster_centers_,
+                                   'euclidean'), axis=1)) / scaledData.shape[0]
     mapping2[k] = model5.inertia_
 
+    if bestK == -1 or bestInertia > model5.inertia_:
+        bestK = k
+        bestInertia = model5.inertia_
+        labelsBestK = labels5
+        clustersBestK = model5.cluster_centers_
 
 
     unique_labels5 = np.unique(labels5)
@@ -250,29 +257,67 @@ plt.ylabel('Inertia')
 plt.title('The Elbow Method')
 plt.savefig("./output/ex5/elbowInertiaByK.png")
 
+## We will let inertia decide what the best clustering method is, as with so many columns it's very difficult to
+## make a decision. We will then look at the Elbow graph to see if the choice matches the plot, and if it has landed
+## on a value we will manually revise the lowest K value.
 
-## It can be seen that the optimal number of clusters is at 5 or 6. Let's study them by taking a look at the
-## generated graphs.
+clustersBestK = pd.DataFrame(clustersBestK, columns=scaledData.columns)
 
-# ## K = 5 We can see that the cardinality of the clusters is similar except for the number 0. This could indicate
-# that the group 0 is not ideal. In terms of the magnitude, the same applies. When checking with the preset of games,
-# we can see the following: most games seem to have landed in one or two groups, with the exception of the # car
-# simulator games (it must be noted that some are simulators and some are arcade games). # The groups are the
-# following, ordered by cardinality: - Singleplayer: 0, 4 - Shooters: 0, 4 - Car games: 4, 0 - Strategy: 0,
-# 4 This clustering method succeeded in grouping the games together but has grouped them in the same groups,
-# despite having different categories. It does not work as intended initially. Let's take a look at examples from the
-# different groups to grasp what kind of grouping has been done underneath by taking a look at the first 200 examples.
+# Define color scale for each column
+color_scales = {
+    'A': {1: 'red', 5: 'green'},
+    'B': {6: 'red', 10: 'green'},
+    'C': {100: 'red', 500: 'green'}
+}
 
-print(mergedData.columns)
-print(clusters5k)
 
-# cluster primer de 0 al 1165.
+# Function to apply colors to the DataFrame
+def apply_colors(value, color_scale):
+    for threshold, color in color_scale.items():
+        if value <= threshold:
+            return color
+    return 'white'  # Default color
 
-### K = 6
-## We can see that something similar happens in this grouping, but this time with group 4. The same applies
-## to magnitude. When checking with the preset of games, we can see the following:
-## The car games are not sorted properly, apparently.
-## The shooter games have been clustered into two groups mainly, we could consider that ok!
-## The singleplayer games are mainly found on cluster nº 4, so that is what we expected.
-## Strategy games are clustered into two defined groups, which is close to the single group that we expected.
 
+# Plotting the DataFrame with a color scale
+plt.figure(figsize=(10, 6))
+plt.imshow(clustersBestK.values, cmap='viridis', aspect='auto')
+
+# Set ticks and labels
+plt.xticks(ticks=np.arange(len(clustersBestK.columns)), labels=clustersBestK.columns)
+plt.yticks(ticks=np.arange(len(clustersBestK)), labels=np.arange(len(clustersBestK)))
+
+# Add colorbar
+plt.colorbar(label='Value')
+
+plt.title('DataFrame with Color Scale')
+plt.xlabel('Cluster number')
+plt.ylabel('Attributes (columns of the DataFrame)')
+plt.show()
+
+## Lastly we will print which attributes have been most valuable in clustering for each cluster center:
+print("MOST IMPORTANT COLUMNS FROM EACH CLUSTER")
+for i in range(0, bestK):
+    print("Cluster number " + str(i) + ":")
+    print(clustersBestK.iloc[i].sort_values(ascending=False)[:5])
+    print("============================")
+
+## We can see that different clusters pick different attributes: some pick sports, some pick software, some pick 3d
+## games, 2d games, rpgs... so, in fact, it is doing the clustering that we expected from the beginning,
+## at a very reduced scale.
+
+## Unfortunately, the games that I picked by hand to "test" the model where mostly fitted into one of the two
+## biggest clusters, which contain most of the games from the list. The proposed method isn't very effective when
+## plotting those games.
+
+## By looking at the Elbow Method we can see that the inertia is generally reduced each time that we increase the "k"
+## value, and it looks like it would still not reach an "asymptote". We can tell that the "k" value should be
+## even higher, but it's beyond the capabilities of my computer.
+
+## Overall, it can be seen that this model is not that simple. 100 clusters hardly gives a good result, as there are
+## two enormous clusters and the rest consists of only specific games. With a higher number of clusters,
+## this idea could work better, but my computer doesn't have the power to handle it. Furthermore, the complexity of
+## similarity between games doesn't only reside in the categories of the games themselves, but we should also take
+## into account what other players have played that is similar in order to reinforce the links between games (maybe
+## two games are located in different categories but their players are the same!). Overall, the graphs show that the
+## clustering process isn't ideal and that the number of clusters that we would need would have to be a lot higher.
